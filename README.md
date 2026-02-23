@@ -1,9 +1,10 @@
 # 🧠 LLM Playground
 
-An interactive, single-file dashboard to visualize how LLMs generate text. Vibecoded with ❤️! (Using Claude Opus 4.6 over GitHub Copilot).
+An interactive, single-file dashboard to visualize how LLMs generate text.
 
 ![LLM Playground Demo](demo.gif)
 
+Vibecoded with ❤️! (Using Claude Opus 4.6 over GitHub Copilot)
 ## Quick Start
 
 1. Open `LLMPlayground.html` in your browser.

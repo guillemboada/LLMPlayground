@@ -837,10 +837,9 @@
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <div></div>
+        <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 0.5rem; position: relative;">
             <h1 style="margin-bottom: 0;">🧠  LLM Playground</h1>
-            <div class="theme-switch" onclick="toggleTheme()" title="Toggle light/dark theme">
+            <div class="theme-switch" onclick="toggleTheme()" title="Toggle light/dark theme" style="position: absolute; right: 0;">
                 <span class="theme-icon">☀️</span>
                 <div class="theme-slider-track">
                     <div class="theme-slider-thumb"></div>
@@ -892,12 +891,12 @@
                     <!-- Tools -->
                     <div>
                         <div class="section-title" style="font-size: 0.95rem; color: var(--text-secondary);">🔧 Tools</div>
-                        <div class="controls" style="margin-bottom: 0.75rem;">
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
                             <button class="btn-small tool-toggle" id="tool-add" onclick="toggleTool('add')">➕ Add numbers</button>
                             <button class="btn-small tool-toggle" id="tool-external_lights" onclick="toggleTool('external_lights')">💡 Lights</button>
                             <button class="btn-small tool-toggle" id="tool-windows" onclick="toggleTool('windows')">🪟 Windows</button>
                             <button class="btn-small tool-toggle" id="tool-planner" onclick="toggleTool('planner')">📋 Planner</button>
-                            <button class="btn-small tool-toggle" id="tool-toggle-all" onclick="toggleAllTools()" style="margin-left: 0.5rem;">All</button>
+                            <button class="btn-small tool-toggle" id="tool-toggle-all" onclick="toggleAllTools()" style="min-width: 3.5rem;">All</button>
                         </div>
                         <textarea id="tools-raw" class="code" placeholder="" style="min-height: 60px; font-size: 0.8rem; margin-bottom: 0;"></textarea>
                     </div>
