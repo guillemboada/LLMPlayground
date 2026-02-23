@@ -870,33 +870,37 @@
         <div class="split-container">
             <!-- LEFT: Input Panel -->
             <div class="input-panel">
-                <!-- System Prompt -->
                 <div class="section">
-                    <div class="section-title">🤖 System Prompt</div>
-                    <textarea id="system-prompt" placeholder="System prompt..." style="min-height: 60px; margin-bottom: 0;">You are a helpful in-car voice assistant.</textarea>
-                </div>
-
-                <!-- User Message -->
-                <div class="section">
-                    <div class="section-title">💬 User Message</div>
-                    <div class="saved-messages" id="saved-messages" style="margin-bottom: 0.5rem;"></div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <textarea id="prompt" placeholder="User message..." style="margin-bottom: 0; flex: 1; min-height: 50px;">Hello!</textarea>
-                        <button class="btn-small" onclick="saveCurrentMessage()" title="Save message" style="padding: 0.5rem; align-self: stretch;">💾</button>
+                    <div class="section-title">📝 Prompt Builder</div>
+                    
+                    <!-- System Prompt -->
+                    <div style="margin-bottom: 1rem;">
+                        <div class="section-title" style="font-size: 0.95rem; color: var(--text-secondary);">🤖 System Prompt</div>
+                        <textarea id="system-prompt" placeholder="System prompt..." style="min-height: 60px; margin-bottom: 0;">You are a helpful in-car voice assistant.</textarea>
                     </div>
-                </div>
 
-                <!-- Tools -->
-                <div class="section">
-                    <div class="section-title">🔧 Tools</div>
-                    <div class="controls" style="margin-bottom: 0.75rem;">
-                        <button class="btn-small tool-toggle" id="tool-add" onclick="toggleTool('add')">➕ Add numbers</button>
-                        <button class="btn-small tool-toggle" id="tool-external_lights" onclick="toggleTool('external_lights')">💡 Lights</button>
-                        <button class="btn-small tool-toggle" id="tool-windows" onclick="toggleTool('windows')">🪟 Windows</button>
-                        <button class="btn-small tool-toggle" id="tool-planner" onclick="toggleTool('planner')">📋 Planner</button>
-                        <button class="btn-small tool-toggle" id="tool-toggle-all" onclick="toggleAllTools()" style="margin-left: 0.5rem;">All</button>
+                    <!-- User Message -->
+                    <div style="margin-bottom: 1rem;">
+                        <div class="section-title" style="font-size: 0.95rem; color: var(--text-secondary);">💬 User Message</div>
+                        <div class="saved-messages" id="saved-messages" style="margin-bottom: 0.5rem;"></div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <textarea id="prompt" placeholder="User message..." style="margin-bottom: 0; flex: 1; min-height: 50px;">Hello!</textarea>
+                            <button class="btn-small" onclick="saveCurrentMessage()" title="Save message" style="padding: 0.5rem; align-self: stretch;">💾</button>
+                        </div>
                     </div>
-                    <textarea id="tools-raw" class="code" placeholder="" style="min-height: 60px; font-size: 0.8rem; margin-bottom: 0;"></textarea>
+
+                    <!-- Tools -->
+                    <div>
+                        <div class="section-title" style="font-size: 0.95rem; color: var(--text-secondary);">🔧 Tools</div>
+                        <div class="controls" style="margin-bottom: 0.75rem;">
+                            <button class="btn-small tool-toggle" id="tool-add" onclick="toggleTool('add')">➕ Add numbers</button>
+                            <button class="btn-small tool-toggle" id="tool-external_lights" onclick="toggleTool('external_lights')">💡 Lights</button>
+                            <button class="btn-small tool-toggle" id="tool-windows" onclick="toggleTool('windows')">🪟 Windows</button>
+                            <button class="btn-small tool-toggle" id="tool-planner" onclick="toggleTool('planner')">📋 Planner</button>
+                            <button class="btn-small tool-toggle" id="tool-toggle-all" onclick="toggleAllTools()" style="margin-left: 0.5rem;">All</button>
+                        </div>
+                        <textarea id="tools-raw" class="code" placeholder="" style="min-height: 60px; font-size: 0.8rem; margin-bottom: 0;"></textarea>
+                    </div>
                 </div>
 
                 <!-- Hidden settings with good defaults -->
