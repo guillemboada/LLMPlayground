@@ -1481,8 +1481,10 @@ If no function is needed, respond normally with text.`;
             if (status === 'none') {
                 container.style.display = 'none';
                 container.innerHTML = '';
-                // Reset tool execution state
-                toolExecutionState = { executed: false, toolName: null, args: null, response: null, continued: false, continuationLogprobs: [] };
+                // Reset tool execution state only if we haven't already continued after tool
+                if (!toolExecutionState.continued) {
+                    toolExecutionState = { executed: false, toolName: null, args: null, response: null, continued: false, continuationLogprobs: [] };
+                }
             } else if (status === 'detecting') {
                 container.style.display = 'block';
                 container.innerHTML = `<div class="tool-call-detecting">🔧 Tool call detected...</div>`;
@@ -1652,16 +1654,14 @@ If no function is needed, respond normally with text.`;
                     toolExecutionState.continued = true;
                     toolExecutionState.continuationLogprobs = continuationLogprobs;
                     
-                    // Append to the main logprobs for step-by-step viewing
-                    // Mark where continuation starts
-                    const continuationStartIndex = stepState.logprobs.length;
-                    stepState.logprobs = [...stepState.logprobs, ...continuationLogprobs];
+                    // Replace the tool call logprobs with only the continuation
+                    stepState.logprobs = continuationLogprobs;
                     
                     // Update originalLogprobs for temperature simulation
                     originalLogprobs = stepState.logprobs;
                     
-                    // Reset step state to allow stepping through new tokens
-                    stepState.currentStep = continuationStartIndex;
+                    // Reset step state to start fresh with continuation tokens
+                    stepState.currentStep = 0;
                     tokenSampled = true;
                     
                     // Enable step controls again
@@ -2595,40 +2595,27 @@ Then continue naturally from there. Do not add anything before "${branchText}".`
             // Get tokens that have been sampled (not pending), handling <|im_end|> specially
             const sampledCount = tokenSampled ? stepState.currentStep : stepState.currentStep - 1;
             const tokensToShow = stepState.logprobs.slice(0, Math.max(0, sampledCount));
-            let generatedText = '';
-            let hasImEnd = false;
-            
-            for (const t of tokensToShow) {
-                if (t.token === '<|im_end|>') {
-                    hasImEnd = true;
-                } else {
-                    generatedText += t.token;
-                }
-            }
             
             // Highlight special tokens in base prompt
             let html = escapeHtml(stepState.basePrompt)
                 .replace(/&lt;\|im_start\|&gt;(system|user|assistant)/g, '<span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#10b981;font-weight:bold;">$1</span>')
                 .replace(/&lt;\|im_end\|&gt;/g, '<span style="color:#7c3aed;font-weight:bold;">&lt;|im_end|&gt;</span>');
             
-            // Add the generated tokens with highlight
-            if (generatedText) {
-                html += `<span style="background:rgba(16,185,129,0.3);color:#10b981;font-weight:600;">${escapeHtml(generatedText)}</span>`;
-            }
-            
-            // Add the <|im_end|> if we've reached it
-            if (hasImEnd) {
+            // If tool was executed and continued, the first assistant response (tool call JSON) is stored,
+            // and stepState.logprobs only has the continuation tokens
+            if (toolExecutionState.continued) {
+                // Show the tool call JSON as the first assistant response
+                const toolCallJson = JSON.stringify({ name: toolExecutionState.toolName, arguments: toolExecutionState.args });
+                html += `<span style="background:rgba(16,185,129,0.3);color:#10b981;font-weight:600;">${escapeHtml(toolCallJson)}</span>`;
                 html += '<br><span style="color:#7c3aed;font-weight:bold;background:rgba(124,58,237,0.2);padding:1px 3px;border-radius:3px;">&lt;|im_end|&gt;</span>';
-            }
-            
-            // If tool was executed, show the tool response in raw input
-            if (toolExecutionState.executed && hasImEnd) {
+                
+                // Tool response
                 const responseJson = JSON.stringify(toolExecutionState.response);
                 html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#f59e0b;font-weight:bold;">tool</span>';
                 html += `<br><span style="background:rgba(245,158,11,0.2);color:#f59e0b;">${escapeHtml(responseJson)}</span>`;
                 html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_end|&gt;</span>';
                 
-                // Show ephemeral system message for resultGuidance (if present)
+                // Ephemeral system message
                 const toolDefForPreview = Object.values(toolDefs).find(t => t.function.name === toolExecutionState.toolName);
                 if (toolDefForPreview && toolDefForPreview.resultGuidance) {
                     html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#f472b6;font-weight:bold;">system</span> <span style="color:#64748b;font-size:0.8em;">(ephemeral)</span>';
@@ -2637,41 +2624,54 @@ Then continue naturally from there. Do not add anything before "${branchText}".`
                 }
                 html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#10b981;font-weight:bold;">assistant</span><br>';
                 
-                // If continuation has started, show those tokens too
-                if (toolExecutionState.continued && toolExecutionState.continuationLogprobs.length > 0) {
-                    // Calculate how many continuation tokens have been sampled
-                    // The continuation tokens start after the original logprobs
-                    const originalCount = stepState.logprobs.length - toolExecutionState.continuationLogprobs.length;
-                    const continuationSampledCount = Math.max(0, (tokenSampled ? stepState.currentStep : stepState.currentStep - 1) - originalCount);
-                    
-                    let continuationText = '';
-                    let continuationHasImEnd = false;
-                    
-                    for (let i = 0; i < continuationSampledCount && i < toolExecutionState.continuationLogprobs.length; i++) {
-                        const t = toolExecutionState.continuationLogprobs[i];
-                        if (t.token === '<|im_end|>') {
-                            continuationHasImEnd = true;
-                        } else {
-                            continuationText += t.token;
-                        }
-                    }
-                    
-                    if (continuationText) {
-                        html += `<span style="background:rgba(0,212,255,0.3);color:#00d4ff;font-weight:600;">${escapeHtml(continuationText)}</span>`;
-                    }
-                    
-                    if (continuationHasImEnd) {
-                        html += '<br><span style="color:#7c3aed;font-weight:bold;background:rgba(124,58,237,0.2);padding:1px 3px;border-radius:3px;">&lt;|im_end|&gt;</span>';
-                    } else if (stepState.currentStep < stepState.logprobs.length) {
-                        html += '<span style="color:#00d4ff;animation:blink 1s infinite;">▌</span>';
-                    }
-                } else {
-                    // Waiting for continue
-                    html += '<span style="color:#f59e0b;animation:blink 1s infinite;">▌</span>';
+                // Continuation tokens
+                let continuationText = '';
+                let continuationHasImEnd = false;
+                for (const t of tokensToShow) {
+                    if (t.token === '<|im_end|>') continuationHasImEnd = true;
+                    else continuationText += t.token;
+                }
+                if (continuationText) {
+                    html += `<span style="background:rgba(0,212,255,0.3);color:#00d4ff;font-weight:600;">${escapeHtml(continuationText)}</span>`;
+                }
+                if (continuationHasImEnd) {
+                    html += '<br><span style="color:#7c3aed;font-weight:bold;background:rgba(124,58,237,0.2);padding:1px 3px;border-radius:3px;">&lt;|im_end|&gt;</span>';
+                } else if (stepState.currentStep < stepState.logprobs.length) {
+                    html += '<span style="color:#00d4ff;animation:blink 1s infinite;">▌</span>';
                 }
             } else {
-                // Add cursor if not complete
-                if (stepState.currentStep < stepState.logprobs.length) {
+                // Normal flow (no tool continuation)
+                let generatedText = '';
+                let hasImEnd = false;
+                for (const t of tokensToShow) {
+                    if (t.token === '<|im_end|>') hasImEnd = true;
+                    else generatedText += t.token;
+                }
+                
+                if (generatedText) {
+                    html += `<span style="background:rgba(16,185,129,0.3);color:#10b981;font-weight:600;">${escapeHtml(generatedText)}</span>`;
+                }
+                
+                if (hasImEnd) {
+                    html += '<br><span style="color:#7c3aed;font-weight:bold;background:rgba(124,58,237,0.2);padding:1px 3px;border-radius:3px;">&lt;|im_end|&gt;</span>';
+                }
+                
+                // If tool was executed but not yet continued, show tool response + waiting cursor
+                if (toolExecutionState.executed && hasImEnd) {
+                    const responseJson = JSON.stringify(toolExecutionState.response);
+                    html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#f59e0b;font-weight:bold;">tool</span>';
+                    html += `<br><span style="background:rgba(245,158,11,0.2);color:#f59e0b;">${escapeHtml(responseJson)}</span>`;
+                    html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_end|&gt;</span>';
+                    
+                    const toolDefForPreview = Object.values(toolDefs).find(t => t.function.name === toolExecutionState.toolName);
+                    if (toolDefForPreview && toolDefForPreview.resultGuidance) {
+                        html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#f472b6;font-weight:bold;">system</span> <span style="color:#64748b;font-size:0.8em;">(ephemeral)</span>';
+                        html += `<br><span style="background:rgba(244,114,182,0.15);color:#f472b6;">${escapeHtml(toolDefForPreview.resultGuidance)}</span>`;
+                        html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_end|&gt;</span>';
+                    }
+                    html += '<br><span style="color:#7c3aed;font-weight:bold;">&lt;|im_start|&gt;</span><span style="color:#10b981;font-weight:bold;">assistant</span><br>';
+                    html += '<span style="color:#f59e0b;animation:blink 1s infinite;">▌</span>';
+                } else if (stepState.currentStep < stepState.logprobs.length) {
                     html += '<span style="color:#10b981;animation:blink 1s infinite;">▌</span>';
                 }
             }
@@ -2900,25 +2900,14 @@ Then continue naturally from there. Do not add anything before "${branchText}".`
             
             let html = '';
             
-            // If we have continuation, split the output
-            if (toolExecutionState.continued && toolExecutionState.continuationLogprobs.length > 0) {
-                const originalCount = stepState.logprobs.length - toolExecutionState.continuationLogprobs.length;
-                const originalTokens = sampledTokens.slice(0, Math.min(sampledCount, originalCount));
-                const continuationTokens = sampledTokens.slice(originalCount);
-                
-                // Render original tokens (tool call)
-                html += renderInteractiveOutput(originalTokens, 0);
-                
-                // Add separator line for continuation
-                if (continuationTokens.length > 0 || stepState.currentStep > originalCount) {
-                    html += `<div style="margin: 0.75rem 0; padding: 0.5rem 0; border-top: 1px dashed rgba(245,158,11,0.4);">
-                        <span style="color: #f59e0b; font-size: 0.8rem; font-weight: 600;">📤 Assistant response (after tool):</span>
-                    </div>`;
-                    html += renderInteractiveOutput(continuationTokens, originalCount);
-                }
-            } else {
-                html = renderInteractiveOutput(sampledTokens, 0);
+            // If continuing after tool, show a label before the response
+            if (toolExecutionState.continued && toolExecutionState.continuationLogprobs.length > 0 && sampledCount > 0) {
+                html += `<div style="margin-bottom: 0.5rem;">
+                    <span style="color: #f59e0b; font-size: 0.8rem; font-weight: 600;">📤 Assistant response (after tool):</span>
+                </div>`;
             }
+            
+            html += renderInteractiveOutput(sampledTokens, 0);
             
             // Add Sample! button if current token not yet sampled
             if (!tokenSampled && stepState.currentStep > 0) {
