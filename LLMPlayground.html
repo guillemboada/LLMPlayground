@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://api.openai.com; img-src 'self' data:; frame-ancestors 'none';">
     <title>🧠  LLM Playground</title>
     <style>
         :root {
@@ -1077,19 +1078,23 @@
             if (activeMessageTab < predefinedEntries.length) {
                 // Predefined categories
                 const [_, messages] = predefinedEntries[activeMessageTab];
-                html += messages.map(msg => 
-                    `<button class="saved-msg-btn" onclick="insertMessage('${msg.replace(/'/g, "\\'").replace(/\n/g, '\\n')}')">${msg}</button>`
-                ).join('');
+                html += messages.map(msg => {
+                    const safeDisplay = escapeHtml(msg);
+                    const safeAttr = escapeHtml(msg.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n'));
+                    return `<button class="saved-msg-btn" onclick="insertMessage('${safeAttr}')">${safeDisplay}</button>`;
+                }).join('');
             } else {
                 // Custom tab
                 if (customMessages.length === 0) {
                     html += '<span style="color: #64748b; font-size: 0.8rem; font-style: italic;">No custom messages yet. Use 💾 to save one!</span>';
                 } else {
-                    html += customMessages.map((msg, i) => 
-                        `<span class="saved-msg-item">
-                            <button class="saved-msg-btn" onclick="insertMessage('${msg.replace(/'/g, "\\'").replace(/\n/g, '\\n')}')" style="border-radius: 6px 0 0 6px; border-right: none;">${msg}</button><button class="saved-msg-remove" onclick="removeCustomMessage(${i})" title="Remove">×</button>
-                        </span>`
-                    ).join('');
+                    html += customMessages.map((msg, i) => {
+                        const safeDisplay = escapeHtml(msg);
+                        const safeAttr = escapeHtml(msg.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n'));
+                        return `<span class="saved-msg-item">
+                            <button class="saved-msg-btn" onclick="insertMessage('${safeAttr}')" style="border-radius: 6px 0 0 6px; border-right: none;">${safeDisplay}</button><button class="saved-msg-remove" onclick="removeCustomMessage(${i})" title="Remove">×</button>
+                        </span>`;
+                    }).join('');
                 }
             }
             html += '</div>';
@@ -1700,10 +1705,11 @@ If no function is needed, respond normally with text.`;
         }
         
         function renderToolExecuteButton(toolName, args) {
+            const safeToolName = escapeHtml(toolName).replace(/'/g, "\\'");
             const argsEncoded = btoa(encodeURIComponent(JSON.stringify(args)));
             return `
                 <div style="margin-top: 0.75rem;">
-                    <button onclick="executeToolCall('${toolName}', JSON.parse(decodeURIComponent(atob('${argsEncoded}'))))" 
+                    <button onclick="executeToolCall('${safeToolName}', JSON.parse(decodeURIComponent(atob('${argsEncoded}'))))" 
                             style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;"
                             onmouseenter="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 15px rgba(16,185,129,0.3)';"
                             onmouseleave="this.style.transform='none'; this.style.boxShadow='none';">
@@ -1716,10 +1722,11 @@ If no function is needed, respond normally with text.`;
         function renderToolResponse(response, showContinueButton = true) {
             const responseJson = JSON.stringify(response, null, 2);
             
-            // Syntax highlight the JSON
-            const highlighted = responseJson
-                .replace(/"([^"]+)":/g, '<span style="color:#7c3aed;">"$1"</span>:')
-                .replace(/: "([^"]+)"/g, ': <span style="color:#fbbf24;">"$1"</span>')
+            // Syntax highlight the JSON (escape first to prevent HTML injection)
+            const escapedJson = escapeHtml(responseJson);
+            const highlighted = escapedJson
+                .replace(/&quot;([^&]+?)&quot;:/g, '<span style="color:#7c3aed;">"$1"</span>:')
+                .replace(/: &quot;([^&]+?)&quot;/g, ': <span style="color:#fbbf24;">"$1"</span>')
                 .replace(/: (\d+)/g, ': <span style="color:#60a5fa;">$1</span>')
                 .replace(/: (true|false)/g, ': <span style="color:#f472b6;">$1</span>');
             
